@@ -1,14 +1,23 @@
-import json
+import argparse
 import os
 import numpy as np
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-t', type=int, default=20, help="number of test data")
+
+args = parser.parse_args()
 
 ROOT_DIR = "datasets"
 IMAGE_DIR = os.path.join(ROOT_DIR, "images")
 LABEL_DIR = os.path.join(ROOT_DIR, "labels")
 EXCLUDE_FILE = ["classes.txt"]
-TEST_NUM = 20
+TEST_NUM = args.t
 
 all_images = os.listdir(IMAGE_DIR)
+
+if TEST_NUM > len(all_images):
+    raise ValueError("size of test dataset must be smaller than total size {}".format(len(all_images)))
+
 indice = np.arange(len(all_images))
 print(len(all_images))
 np.random.shuffle(indice)
