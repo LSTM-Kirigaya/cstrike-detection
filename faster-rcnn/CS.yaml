@@ -1,0 +1,6 @@
+path: "../datasets"        # dataset root dir
+train: traindata.txt  # relative to 'path'
+val: testdata.txt     # relative to 'path'
+
+nc: 4  # number of classes
+names: ['C', 'dead', 'T', 'weapon']  # class names
