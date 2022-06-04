@@ -1,8 +1,8 @@
 # Cstrike Detection
-[![](https://img.shields.io/badge/Framework-PyTorch-brightgreen)](https://github.com/LSTM-Kirigaya/SimpleTensor) 
-[![](https://img.shields.io/badge/Python_Version-3.7-blue)](https://github.com/LSTM-Kirigaya/SimpleTensor) 
-[![](https://img.shields.io/badge/Task-Object_Detection-purple)](https://github.com/LSTM-Kirigaya/SimpleTensor)
-[![](https://img.shields.io/badge/Scene-CS1.6-yellow)](https://github.com/LSTM-Kirigaya/SimpleTensor)
+![](https://img.shields.io/badge/Framework-PyTorch-brightgreen) 
+![](https://img.shields.io/badge/Python_Version-3.7-blue) 
+![](https://img.shields.io/badge/Task-Object_Detection-purple)
+![](https://img.shields.io/badge/Scene-CS1.6-yellow)
 
 ## Motivation
 The project is aimed at constructing automatic aiming system based on object detection algorithm, in order to have fun in `CS 1.6`.
