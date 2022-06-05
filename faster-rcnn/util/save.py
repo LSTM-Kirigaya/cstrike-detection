@@ -48,6 +48,8 @@ def get_exp_name(listdir : list) -> str:
             next_num += 1
         else:
             break
+    if exp_name == "exp0":
+        exp_name = "exp"
     return exp_name
 
 def find_best_model(weights_dir : str) -> None:

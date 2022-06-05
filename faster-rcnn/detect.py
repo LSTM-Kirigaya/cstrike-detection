@@ -5,6 +5,10 @@ import cv2
 import numpy as np
 import sys
 import os
+import time
+import pynvml
+import typing
+
 sys.path.append('./')
 import random
 from util.save import get_exp_name, InputType, judge_file_type
@@ -16,6 +20,9 @@ class Config:
     class_names : str
     device : str
     run_dir : str = "runs"
+    save_txt : bool
+    save_conf : bool
+    nosave : bool
 
 COLORS = (
     (255, 255, 255),     # reserve for background
@@ -39,19 +46,37 @@ def get_args():
     parser.add_argument('--weights', default='default', help='weights, default to use torchvision')
     parser.add_argument('--device', default='cuda', help='device cpu or cuda')
     parser.add_argument('--score', type=float, default=0.8, help='objectness score threshold')
+
+    parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
+    parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
+    parser.add_argument('--nosave', action='store_true', help='do not save images/videos')
+    
+    parser.add_argument('--project', default="runs/detect", help='save results to project/name')
+    parser.add_argument('--name', default='exp', help='save results to project/name')
     args = parser.parse_args()
  
     return args
 
-def detect_image(model, src_img, names : dict, colormap : dict) -> np.ndarray:
+def detect_image(model, src_img : np.ndarray, names : dict, colormap : dict) -> np.ndarray:
     """inputs image BGR"""
+    
+    result = {
+        "labels" : [],
+        "bboxes" : [],
+        "scores" : [],
+        "inference_time" : 0
+    }
+ 
     device = Config.device
     img = cv2.cvtColor(src_img, cv2.COLOR_BGR2RGB)
     img_tensor = torch.from_numpy(img / 255.).permute(2, 0, 1).float()
     if device == "cuda":
         img_tensor = img_tensor.cuda()
+    s = time.time()
     with torch.no_grad():
         out = model([img_tensor])
+    result['inference_time'] = time.time() - s
+
     boxes = out[0]['boxes']
     labels = out[0]['labels']
     scores = out[0]['scores']
@@ -59,12 +84,21 @@ def detect_image(model, src_img, names : dict, colormap : dict) -> np.ndarray:
     lw = max(round(sum(src_img.shape) / 2 * 0.003), 2)
     # tf = max(lw - 1, 1)
     tf = 2
- 
+
     for idx in range(boxes.shape[0]):
         if scores[idx] >= Config.score:
             x1, y1, x2, y2 = boxes[idx][0], boxes[idx][1], boxes[idx][2], boxes[idx][3]
             p1 = (int(x1), int(y1))
             p2 = (int(x2), int(y2))
+
+            yolo_x = (x1 + x2) / 2 / src_img.shape[1]
+            yolo_y = (y1 + y2) / 2 / src_img.shape[0]
+            yolo_w = (x2 - x1) / src_img.shape[1]
+            yolo_h = (y2 - y1) / src_img.shape[0]
+
+            result["bboxes"].append((float(yolo_x), float(yolo_y), float(yolo_w), float(yolo_h)))
+            result["labels"].append(str(labels[idx].item()))
+            result["scores"].append(scores[idx].item())
 
             name = names.get(str(labels[idx].item()))
             label = name + " " + str(round(scores[idx].item(), 2))
@@ -84,16 +118,37 @@ def detect_image(model, src_img, names : dict, colormap : dict) -> np.ndarray:
                 thickness=tf,
                 lineType=cv2.LINE_AA
             )
-    return src_img
+    
+    result["image"] = src_img
+
+    return result
 
 def handle_image(image_path : str, model : torch.nn.Module, names : dict, colormap : dict, save_dir : str) -> None:
     """handle image and save result to run/detect/expi/*"""
     src_img = cv2.imread(image_path)
     result = detect_image(model, src_img, names, colormap)
+    print("[LOG] cost time {}ms".format(round(result["inference_time"] * 1000, 2)))
     image_name = os.path.basename(image_path)
     save_path = os.path.join(save_dir, image_name)
-    cv2.imwrite(save_path, result)
-    print("[LOG] save result to {}".format(save_path))
+    if not Config.nosave:
+        cv2.imwrite(save_path, result["image"])
+        print("[LOG] save result to {}".format(save_path))
+    if Config.save_txt:
+        txt_name = image_name.split(".")[0] + ".txt"
+        txt_path = os.path.join(save_dir, "labels")
+        if not os.path.exists(txt_path):
+            os.makedirs(txt_path)
+        txt_path = os.path.join(txt_path, txt_name)
+        fp = open(txt_path, "w", encoding="utf-8")
+        for i in range(len(result["bboxes"])):
+            fp.write("{} ".format(int(result["labels"][i]) - 1))
+            box = result["bboxes"][i]
+            fp.write("{} {} {} {}".format(box[0], box[1], box[2], box[3]))
+            if Config.save_conf:
+                fp.write(" {}".format(result['scores'][i]))
+            fp.write("\n")
+        fp.close()
+        print("[LOG] save result to {}".format(txt_path))
 
 def handle_video(video_path : str, model : torch.nn.Module, names : dict, colormap : dict, save_dir : str):
     assert os.path.exists(video_path)
@@ -104,28 +159,29 @@ def handle_video(video_path : str, model : torch.nn.Module, names : dict, colorm
     save_path = os.path.join(save_dir, video_name)
 
     cap = cv2.VideoCapture(video_path)
-    fourcc = cv2.VideoWriter_fourcc(*FORMAT)
-
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    print("[LOG] current video information: FPS : {}, height : {}, width : {}".format(fps, height, width))
-
-    out = cv2.VideoWriter(save_path, fourcc, fps, (width, height))
+    if not Config.nosave:
+        fourcc = cv2.VideoWriter_fourcc(*FORMAT)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        print("[LOG] current video information: FPS : {}, height : {}, width : {}".format(fps, height, width))
+        out = cv2.VideoWriter(save_path, fourcc, fps, (width, height))
     
     cur = 1
     while (cap.isOpened()):
         ret, frame = cap.read()
         if not ret:
             break 
-        frame = detect_image(model, frame, names, colormap)
-        out.write(frame)
+        result = detect_image(model, frame, names, colormap)
+        if not Config.nosave:
+            out.write(result["image"])
         process_bar(cur, frames, prefix='[PROCRESS]')
         cur += 1
         
     cap.release()
-    out.release()
+    if not Config.nosave:
+        out.release()
     cv2.destroyAllWindows()
 
 
@@ -135,8 +191,8 @@ def handle_webcam(model : torch.nn.Module, names : dict, colormap : dict):
         ret, frame = cap.read()
         if ret is False:
             break
-        detect_frame = detect_image(model, frame, names, colormap)
-        cv2.imshow("webcam", detect_frame)
+        result = detect_image(model, frame, names, colormap)
+        cv2.imshow("webcam", result["image"])
         if cv2.waitKey(1) >= 0:
             break
 
@@ -145,6 +201,9 @@ def main():
     args = get_args()
     Config.device = args.device
     Config.score = args.score
+    Config.nosave = args.nosave
+    Config.save_txt = args.save_txt
+    Config.save_conf = args.save_conf
         
     # Model creating
     print("[LOG] Initialise model")
@@ -179,10 +238,16 @@ def main():
     print("[LOG] everything is ready, device : {}".format(Config.device))
 
     # determine save dir
-    detect_root = os.path.join(Config.run_dir, "detect")
-    exp_name = get_exp_name(os.listdir(detect_root))
-    save_dir = os.path.join(detect_root, exp_name)
-    os.makedirs(save_dir)
+    detect_root = args.project
+    if args.name == "exp":
+        exp_name = get_exp_name(os.listdir(detect_root))
+        save_dir = os.path.join(detect_root, exp_name)
+    else:
+        save_dir = os.path.join(detect_root, args.name)
+
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    
 
     input_type = judge_file_type(args.source)
     if input_type == InputType.WEBCAM:
