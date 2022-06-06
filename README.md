@@ -81,7 +81,7 @@ I have tried Faster-RCNN and YOLO v5m to realise the task. Here are the results.
 
 I have published a demo video on [My bilibili Channel](https://www.bilibili.com/video/BV1dB4y1X77G?zw) to show the comparsion, there is a screenshot.
 
-![](./figure/result.png)
+![](https://fastly.jsdelivr.net/gh/LSTM-Kirigaya/KImage/Img/result.png)
 
 > Emm, maybe the fact that different color is used on the same class should be mentioned. But I think most of you don't care :D
 
