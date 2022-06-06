@@ -70,3 +70,37 @@ $python detect.py --weights "runs/train/exp/weights/best.pt" --score 0.6 --devic
 ```
 
 Where `runs/train/exp/weights/best.pt` is the finetone weight and `<media path>` can be path of image, video or the folder of both. If `<media path>` is set to 0, then webcam will be used.
+
+---
+
+# My Experiment Result
+
+I have tried Faster-RCNN and YOLO v5m to realise the task. Here are the results.
+
+## Qualitative Comparsion
+
+I have published a demo video on [My bilibili Channel](https://www.bilibili.com/video/BV1dB4y1X77G?zw) to show the comparsion, there is a screenshot.
+
+![](./figure/result.png)
+
+> Emm, maybe the fact that different color is used on the same class should be mentioned. But I think most of you don't care :D
+
+## Time and space consumption
+| model name    | inference time(ms) | model size(MB) |
+| ----------- | ------------ | ------------ |
+| Faster-RCNN | 78.51        | 158          |
+| YOLO-v5m    | 20.2         | 40.2         |
+
+## mAP
+
+| model name    | mAP@0.5 | weighted mAP@0.5 | bbox loss |
+| ----------- | ------- | ----------- | --------- |
+| Faster-RCNN | 0.725   | 0.190       | 0.014     |
+| YOLO-v5m    | 0.389   | 0.115       | 0.017     |
+
+## P-R curve
+
+<div align=center>
+<img src="https://fastly.jsdelivr.net/gh/LSTM-Kirigaya/KImage/Img/pr.png" style="width: 90%;"/>
+</div>
+
