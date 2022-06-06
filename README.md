@@ -11,7 +11,7 @@ The project is aimed at constructing automatic aiming system based on object det
 
 - [x] Finish training and test of `YOLO v5` and `Faster-RCNN`.
 - [ ] Finish deployment pipeline.
-- [ ] Construct automatic aiming system and test.
+- [x] Construct automatic aiming system and test.
 
 ## Prepare for dataset
 ### Step 1. download dataset
@@ -103,4 +103,36 @@ I have published a demo video on [My bilibili Channel](https://www.bilibili.com/
 <div align=center>
 <img src="https://fastly.jsdelivr.net/gh/LSTM-Kirigaya/KImage/Img/pr.png" style="width: 90%;"/>
 </div>
+
+---
+
+# How to have fun?
+
+I choose `Faster-RCNN` for real-time inference, based on which a auto-aim and fire system is constructed.
+
+If you want to use it, `cstrike.exe` must be installed in your computer (Yeah, my OS is windows11. If you use Unix, please give it a try).
+
+At least, you should ensure that a handler named **Counter-Strike** can be found in your task list. First, launch `cstrike.exe`, choose map "ice world" and play the role of counter strike.
+
+> I suggest running the game in window mode
+
+Then, train the weight of Faster-RCNN and suppose that the weight file is saved in "./faster-rcnn/runs/train/exp1/weights/best.pth", then run the command in your console:
+
+```bash
+$python autoaim.py --weights "../faster-rcnn/runs/train/exp1/weights/best.pth" --device cuda --score 0.6 --debug --auto-aim --auto-fire
+```
+
+- `--device cuda` means we use GPU to accelerate inference.
+- `--score 0.6` means only bbox whose confidence is greater 0.6 will be displayed or considered in later process.
+- `--debug` means run the program in a debug mode, then an extra window which is rendered with bbox and its corresponding predicted class will be generated.
+- `--auto-aim` means program will move your mouse if it detected enemy.
+- `--auto-fire` means program will open the fire automatically.
+
+---
+
+# FAQ
+
+Why model's accuary is low when the enemy is counter strike or the map is not "ice world"?
+
+> Emm, I only construct the dataset in the view of counter strike in this map, so if you like ...
 

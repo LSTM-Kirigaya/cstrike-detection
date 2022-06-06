@@ -6,8 +6,6 @@ import numpy as np
 import sys
 import os
 import time
-import pynvml
-import typing
 
 sys.path.append('./')
 import random
